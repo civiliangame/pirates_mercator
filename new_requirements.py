@@ -21,7 +21,6 @@ class MyVBoxLayout(QVBoxLayout):
 
 
 class MyHBoxLayout(QHBoxLayout):
-    # mySignal = pyqtSignal(str)
     mySignal = pyqtSignal(object, object)
     def __init__(self, x):
         super().__init__(x)
@@ -29,16 +28,9 @@ class MyHBoxLayout(QHBoxLayout):
     def delete_signal(self, x, y):
         self.mySignal.emit(x,y)
 
-#배경삭제 + RGBA png 로 output (alpha channel 0)
-#equirectangular
-#픽셀값 + 년도 선택
-#Gaussian Blur 0.3, glow 효과까지 output. 가능하면 toggle.
-#
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        # widgetRemoved = pyqtSignal(QWidget)
-        # Create a main widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         self.radius = 0.3
@@ -48,36 +40,23 @@ class MainWindow(QMainWindow):
         self.equi = False
         self.glow = False
         self.bruteforce = False
-        # Create a horizontal layout for the main windows
         hlayout = QHBoxLayout()
-
-        # Create the first main window
         self.window1 = QListWidget()
         window1_layout = QVBoxLayout()
         self.window1.setLayout(window1_layout)
-
-        # Get a list of all files in the maps folder
         folder_path = "./maps"
         files = os.listdir(folder_path)
 
-        # Add each file to the file list widget
         for file in sorted(files, key=self.sort_function):
             if file.endswith(".png") and os.path.isfile(os.path.join(folder_path, file)):
                 item = QListWidgetItem(file)
                 self.window1.addItem(item)
-
-        # Connect the itemSelectionChanged signal of the list widget to a custom method
         self.window1.itemSelectionChanged.connect(self.update_window2)
         self.window1.setFixedSize(200, 700)
-        # self.window1.installEventFilter(self)
-        # Create a search widget
         search_widget = QLineEdit()
         search_widget.setPlaceholderText("Search")
         search_widget.textChanged.connect(self.filter_window1)
 
-        # Add the list widget and search widget to a vertical layout
-        # self.color_palette = ColorPalette()
-        # self.color_palette.clicked.connect(self.open_color_dialog)
         self.color = QColor("red")
         self.color_change_queue = []
 
@@ -105,9 +84,6 @@ class MainWindow(QMainWindow):
         self.window2.setAlignment(Qt.AlignCenter)
         self.window2.setStyleSheet("border: 1px solid red;")
         self.window2.installEventFilter(self)
-        # self.window2
-
-        # Wrap the label inside a scroll area
         scroll_area2 = QScrollArea()
         scroll_area2.setWidgetResizable(True)
         scroll_area2.setWidget(self.window2)
@@ -118,10 +94,6 @@ class MainWindow(QMainWindow):
         vlayout2.addWidget(scroll_area2)
 
 
-
-        #
-        # vwidget2 = QWidget()
-        # vwidget2.setLayout(vlayout2)
 
         # Create the third main window
         self.window3 = QLabel()
@@ -153,10 +125,11 @@ class MainWindow(QMainWindow):
         self.color_code_widget = QWidget()
         self.color_code_widget.setStyleSheet("border: 1px solid blue;")
         self.color_code_widget.setFixedSize(1300, 150)
-        self.color_code_widget.installEventFilter(self)
         self.color_code = MyHBoxLayout(self.color_code_widget)
+        self.color_code_widget.layout().installEventFilter(self)
         self.color_code.setAlignment(Qt.AlignLeft)
-
+        # self.color_code.mySignal.connect(self.update_color_list)
+        # self.color_code.installEventFilter(self)
 
 
         self.checkboxes = QVBoxLayout()
@@ -189,15 +162,6 @@ class MainWindow(QMainWindow):
 
         print(self.color_code.mySignal)
 
-        # def gaussian_checkboxClicked():
-        # def equi_checkboxClicked():
-        # def glow_checkboxClicked():
-        # def render_images()
-
-
-        # self.color_code.mySignal.connect(lambda x,y: self.update_color_list(x,y))
-        # self.color_code_widget.(self.remove_item_from_selected_years)
-        # self.color_code.
 
 
 
@@ -212,10 +176,245 @@ class MainWindow(QMainWindow):
 
         main_widget.setLayout(hlayout)
 
-    def mercator_to_equirectangular(self, x, y):
-        longitude = (x / 4096.0) * 360.0 - 180.0
-        latitude = ((y / 2048.0) * 180.0) - 90.0
-        return (longitude, latitude)
+
+    def gaussian_checkboxClicked(self, state):
+        if state==Qt.Checked:
+            self.gaussian = True
+        else:
+            self.gaussian = False
+
+
+    def equi_checkboxClicked(self, state):
+        if state==Qt.Checked:
+            self.equi = True
+        else:
+            self.equi = False
+
+
+    def glow_checkboxClicked(self, state):
+        if state==Qt.Checked:
+            self.glow = True
+        else:
+            self.glow = False
+
+    def brute_forceClicked(self, state):
+        if state==Qt.Checked:
+            self.bruteforce = True
+        else:
+            self.bruteforce = False
+
+    def sort_function(self, file):
+        if "BC" in file:
+            year = -1*int(file.replace("BC","").replace(".png",""))
+        else:
+            year = int(file.replace("Year_AD", "").replace(".png", ""))
+        return year
+
+    def filter_window1(self, text):
+        # Loop through the items in the list widget
+        for i in range(self.window1.count()):
+            item = self.window1.item(i)
+            if text.lower() in item.text().lower():
+                item.setHidden(False)
+            else:
+                item.setHidden(True)
+
+
+
+    def remove_item_from_selected_years(self, item):
+        if QApplication.keyboardModifiers() == Qt.AltModifier:
+            self.selected_years.takeItem(self.selected_years.row(item))
+            return True
+
+    # def update_color_list(self, layout):
+    #     # Remove the corresponding entry in the color_change_queue
+    #     self.color_change_queue.pop(self.color_change_queue.index(layout))
+    #     print("hello?")
+    #     print(len(self.color_change_queue))
+    #
+    #     # Remove the layout from the color_code widget
+    #     self.color_code.removeItem(layout)
+
+    def update_window2(self):
+        # Get the selected item from the list widget
+        selected_item = self.window1.currentItem()
+        self.currentYear = selected_item.text()
+
+        if selected_item is not None:
+            # Get the file path of the selected item
+            file_path = os.path.join("./maps", selected_item.text())
+
+            if QApplication.keyboardModifiers() == Qt.AltModifier:
+                item = QListWidgetItem(selected_item.text())
+                self.selected_years.addItem(item)
+
+
+
+            image = QImage(file_path)
+            # Load the image using QPixmap and set it as the pixmap of the label
+            self.original_pixmap = QPixmap.fromImage(image)
+
+            self.scale_factor = 0.1953125
+            scaled_pixmap = self.original_pixmap.scaled(
+                self.scale_factor * self.original_pixmap.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.window2.setPixmap(scaled_pixmap)
+            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
+
+
+
+    # Add an event listener to the second label in the layout
+    # def add_event_listener_to_layout(self, layout):
+    #     label1 = layout.itemAt(0).widget()
+    #     label1.mousePressEvent = self.handle_label_click
+
+
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Q:
+            self.scale_factor *= 1.2
+            scaled_pixmap = self.original_pixmap.scaled(
+                self.scale_factor * self.original_pixmap.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.window2.setPixmap(scaled_pixmap)
+            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
+
+        if event.key() == Qt.Key_W:
+            self.scale_factor *= 0.8
+            scaled_pixmap = self.original_pixmap.scaled(
+                self.scale_factor * self.original_pixmap.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.window2.setPixmap(scaled_pixmap)
+            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
+
+        if event.key() == Qt.Key_R:
+            print("ready to go!!!!")
+
+        else:
+            super().keyPressEvent(event)
+
+    def eventFilter(self, obj, event):
+        if isinstance(obj, QLabel):
+            if obj.text() == "change":
+                if event.type() == QEvent.MouseButtonPress and event.modifiers() == Qt.AltModifier:
+                    # Find the layout that contains the clicked label
+                    for i in range(self.color_code.count()):
+                        layout = self.color_code.itemAt(i)
+                        label = layout.itemAt(1).widget()  # Assumes the "change" label is the second item in the layout
+                        if label == obj:
+                            # Remove the layout from the color_code layout
+                            self.color_change_queue.pop(i)
+
+                            print("color_change_queue length", len(self.color_change_queue))
+                            self.color_code.removeItem(layout)
+
+                            print("after removing from layout", len(self.color_code))
+                            obj.setText("")
+                            layout.itemAt(0).widget().setText("")
+                            obj.setStyleSheet(f"background-color: transparent; border: none;")
+                            layout.itemAt(0).widget().setStyleSheet(f"background-color: transparent; border: none;")
+                            self.color_code_widget = self.color_code_widget
+                            self.color_code = self.color_code
+                            self.color_change_queue = self.color_change_queue
+                            print(self.color_code)
+                            print(self.color_change_queue)
+                            break
+
+        if obj == self.window2:
+            if event.type() == QEvent.MouseButtonDblClick and event.modifiers() != Qt.AltModifier:
+                color = QColorDialog.getColor(self.color, self)
+                self.color = color
+                if color.isValid():
+                    output_color = color
+                    x = int(event.pos().x() / self.scale_factor)
+                    y = int(event.pos().y() / self.scale_factor)
+                    input_color = self.original_pixmap.toImage().pixelColor(x, y)
+                    colorLayout = QVBoxLayout()
+
+                    label1 = QLabel()
+                    label2 = QLabel()
+                    label2.setText("change")
+
+                    label1.setFixedSize(50,50)
+                    label2.setFixedSize(50,50)
+
+                    label1.setStyleSheet(f"background-color: {input_color.name()};")
+                    label2.setStyleSheet(f"background-color: {output_color.name()};")
+                    colorLayout.addWidget(label1)
+                    colorLayout.addWidget(label2)
+                    # colorLayout.destroyed.connect()
+                    print("this shouldn't happen")
+                    label2.installEventFilter(self)
+                    self.color_code.addLayout(colorLayout)
+
+                    self.color_change_queue.append([input_color, output_color, x, y, self.currentYear])
+
+
+        if obj == self.window2:
+            if event.type() == QEvent.MouseButtonPress and event.modifiers() == Qt.AltModifier:
+                print("this was received")
+                # Get the color of the selected pixel
+                x = int(event.pos().x() / self.scale_factor)
+                y = int(event.pos().y() / self.scale_factor)
+                color = self.original_pixmap.toImage().pixelColor(x, y)
+
+                # Create a new pixmap for the selected pixels
+
+                np_array = np.zeros((4096,4096))
+
+                # Find all the adjacent pixels with the same color using an iterative flood fill algorithm
+                image = self.original_pixmap.toImage()
+                stack = [(x, y)]
+                counter=0
+                to_draw = []
+                while stack:
+
+                    x, y = stack.pop()
+                    counter+=1
+                    if np_array[x][y] == 1:
+                        continue
+                    np_array[x][y] = 1
+                    if not self.check_pixel(image, x, y, color):
+                        # print("out1")
+                        continue
+
+                    to_draw.append([x,y])
+
+
+                    # new_pixmap.setPixelColor(x, y, new_color)
+                    if np_array[x+1, y] == 0:
+                        stack.append((x + 1, y))
+                    if np_array[x-1, y] == 0:
+                        stack.append((x - 1, y))
+                    if np_array[x, y+1] == 0:
+                        stack.append((x, y + 1))
+                    if np_array[x, y-1] == 0:
+                        stack.append((x, y - 1))
+
+                # print("hi?")
+                painter = QPainter(self.qpixmap_rgba)
+                painter.setPen(QPen(self.color, 1))
+                painter.setBrush(QBrush(self.color))
+                for x,y in to_draw:
+                    painter.drawPoint(x,y)
+                painter.end()
+                self.window3.setPixmap(self.qpixmap_rgba.scaled(
+                self.scale_factor3 * self.qpixmap_rgba.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            # print("painting ended")
+                return True
+        return super().eventFilter(obj, event)
+
+    def check_pixel(self, image, x, y, color):
+
+        # print(x,y,image.width(), image.height())
+        if x < 1 or x >= image.width() -1 or y < 1 or y >= image.height() - 1:
+            # print("exiting here????")
+            return False
+
+
+        return image.pixelColor(x, y) == color
+
 
 
     def render_images(self):
@@ -251,8 +450,6 @@ class MainWindow(QMainWindow):
                     # print("out1")
                     continue
                 max_area["%s,%s" % (x, y)] = 1
-                # print("adding", x, y)
-                # new_pixmap.setPixelColor(x, y, new_color)
                 if np_array[x + 1, y] == 0:
                     stack.append((x + 1, y))
                 if np_array[x - 1, y] == 0:
@@ -274,14 +471,9 @@ class MainWindow(QMainWindow):
 
                 print(yl)
                 print("11111111")
-                print(years_to_render)
-                print("22222222222")
                 compare_file = os.path.join("maps", yl)
                 save_file = os.path.join(folder_name, yl)
                 new_year_image = QImage(compare_file)
-                print(new_year_image)
-                print(new_year_image.size())
-                print("----------------------")
                 # new_year_image = QPixmap.fromImage(new_year_image)
                 to_draw = []
 
@@ -398,262 +590,7 @@ class MainWindow(QMainWindow):
         for file_path in all_saved_files:
             url = QUrl.fromLocalFile(os.path.join(folder_name, file_path))
             QDesktopServices.openUrl(url)
-    def gaussian_checkboxClicked(self, state):
-        if state==Qt.Checked:
-            self.gaussian = True
-        else:
-            self.gaussian = False
 
-
-    def equi_checkboxClicked(self, state):
-        if state==Qt.Checked:
-            self.equi = True
-        else:
-            self.equi = False
-
-
-    def glow_checkboxClicked(self, state):
-        if state==Qt.Checked:
-            self.glow = True
-        else:
-            self.glow = False
-
-    def brute_forceClicked(self, state):
-        if state==Qt.Checked:
-            self.bruteforce = True
-        else:
-            self.bruteforce = False
-
-    def sort_function(self, file):
-        if "BC" in file:
-            year = -1*int(file.replace("BC","").replace(".png",""))
-        else:
-            year = int(file.replace("Year_AD", "").replace(".png", ""))
-        return year
-
-    def filter_window1(self, text):
-        # Loop through the items in the list widget
-        for i in range(self.window1.count()):
-            item = self.window1.item(i)
-            if text.lower() in item.text().lower():
-                item.setHidden(False)
-            else:
-                item.setHidden(True)
-
-
-
-    def remove_item_from_selected_years(self, item):
-        if QApplication.keyboardModifiers() == Qt.AltModifier:
-            self.selected_years.takeItem(self.selected_years.row(item))
-            return True
-
-
-    #
-
-    def open_color_dialog(self):
-        # Open the color dialog and get the selected color
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.color = color
-
-    def update_color_list(self, layout, color_code_index):
-        for i in range(self.color_code.count()):
-            if self.color_code.itemAt(i) == layout:
-                self.color_change_queue.pop(i)
-                self.color_code.removeItem(layout)
-                return True
-
-    def update_window2(self):
-        # Get the selected item from the list widget
-        selected_item = self.window1.currentItem()
-        self.currentYear = selected_item.text()
-
-        if selected_item is not None:
-            # Get the file path of the selected item
-            file_path = os.path.join("./maps", selected_item.text())
-
-            if QApplication.keyboardModifiers() == Qt.AltModifier:
-                item = QListWidgetItem(selected_item.text())
-                self.selected_years.addItem(item)
-
-
-
-            image = QImage(file_path)
-            # Load the image using QPixmap and set it as the pixmap of the label
-            self.original_pixmap = QPixmap.fromImage(image)
-
-            self.scale_factor = 0.1953125
-            scaled_pixmap = self.original_pixmap.scaled(
-                self.scale_factor * self.original_pixmap.size(),
-                Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.window2.setPixmap(scaled_pixmap)
-            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
-
-
-
-    # Add an event listener to the second label in the layout
-    # def add_event_listener_to_layout(self, layout):
-    #     label1 = layout.itemAt(0).widget()
-    #     label1.mousePressEvent = self.handle_label_click
-
-
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Q:
-            self.scale_factor *= 1.2
-            scaled_pixmap = self.original_pixmap.scaled(
-                self.scale_factor * self.original_pixmap.size(),
-                Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.window2.setPixmap(scaled_pixmap)
-            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
-
-        if event.key() == Qt.Key_W:
-            self.scale_factor *= 0.8
-            scaled_pixmap = self.original_pixmap.scaled(
-                self.scale_factor * self.original_pixmap.size(),
-                Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.window2.setPixmap(scaled_pixmap)
-            self.window2.adjustSize()  # Make sure the label is resized to fit the pixmap
-
-        if event.key() == Qt.Key_R:
-            print("ready to go!!!!")
-
-        else:
-            super().keyPressEvent(event)
-
-
-    def eventFilter(self, obj, event):
-
-        # if obj != QMainWindow and isinstance(obj, QLabel):
-        #     if obj.text() == "change":
-        #         if event.type() == QEvent.MouseButtonPress and event.modifiers() == Qt.AltModifier:
-        #             for i in range(self.color_code.count()):
-        #                 layout = self.color_code.itemAt(i)
-        #                 if layout.itemAt(1).widget() == obj:
-        #                     print("found: ", i)
-        #                     color_code_index = i
-        #                     break
-        #             self.update_color_list(layout, color_code_index)
-        #
-        #             print("index", color_code_index)
-        #             if color_code_index is not None and color_code_index < self.color_code.count():
-        #                 item = self.color_code.itemAt(color_code_index)
-        #                 if item is not None:
-        #                     item.widget().deleteLater()
-        #                     self.color_code.removeItem(item)
-        #                     print("deleting", item, "length of color_queue:", len(self.color_code))
-        #                     self.color_change_queue.pop(color_code_index)
-        #                     # self.color_code_widget.
-        #                     QCoreApplication.processEvents()
-        # #             return True
-
-        # ...
-
-        # return super().eventFilter(obj, event)
-
-        if obj == self.window2:
-            if event.type() == QEvent.MouseButtonDblClick and event.modifiers() != Qt.AltModifier:
-                color = QColorDialog.getColor(self.color, self)
-                self.color = color
-                if color.isValid():
-                    output_color = color
-                    x = int(event.pos().x() / self.scale_factor)
-                    y = int(event.pos().y() / self.scale_factor)
-                    input_color = self.original_pixmap.toImage().pixelColor(x, y)
-                    colorLayout = QVBoxLayout()
-
-                    label1 = QLabel()
-                    label2 = QLabel()
-                    label2.setText("change")
-
-                    label1.setFixedSize(50,50)
-                    label2.setFixedSize(50,50)
-                    label1.setStyleSheet(f"background-color: {input_color.name()};")
-                    label2.setStyleSheet(f"background-color: {output_color.name()};")
-                    colorLayout.addWidget(label1)
-                    colorLayout.addWidget(label2)
-                    # colorLayout.destroyed.connect()
-                    label2.installEventFilter(self)
-                    self.color_code.addLayout(colorLayout)
-
-
-                    # colorLayout.installEventFilter(self)
-                    # print("appending: ", [input_color, output_color, x, y, self.currentYear])
-                    self.color_change_queue.append([input_color, output_color, x, y, self.currentYear])
-                    return True
-
-
-
-
-
-        if obj == self.window2 and event.type() == QEvent.MouseButtonPress and event.modifiers() == Qt.AltModifier:
-            print("this was received")
-            # Get the color of the selected pixel
-            x = int(event.pos().x() / self.scale_factor)
-            y = int(event.pos().y() / self.scale_factor)
-            color = self.original_pixmap.toImage().pixelColor(x, y)
-
-            # Create a new pixmap for the selected pixels
-
-            np_array = np.zeros((4096,4096))
-
-            # Find all the adjacent pixels with the same color using an iterative flood fill algorithm
-            image = self.original_pixmap.toImage()
-            # print("type here:", type(image))
-            # new_color = QColor(Qt.green)  # Choose a new color that is unlikely to appear in the image
-            # explored = {}
-            stack = [(x, y)]
-            counter=0
-            to_draw = []
-            while stack:
-
-                x, y = stack.pop()
-                counter+=1
-                if np_array[x][y] == 1:
-                    continue
-                np_array[x][y] = 1
-                if not self.check_pixel(image, x, y, color):
-                    # print("out1")
-                    continue
-
-                to_draw.append([x,y])
-
-
-                # new_pixmap.setPixelColor(x, y, new_color)
-                if np_array[x+1, y] == 0:
-                    stack.append((x + 1, y))
-                if np_array[x-1, y] == 0:
-                    stack.append((x - 1, y))
-                if np_array[x, y+1] == 0:
-                    stack.append((x, y + 1))
-                if np_array[x, y-1] == 0:
-                    stack.append((x, y - 1))
-
-            # print("hi?")
-            painter = QPainter(self.qpixmap_rgba)
-            painter.setPen(QPen(self.color, 1))
-            painter.setBrush(QBrush(self.color))
-            for x,y in to_draw:
-                painter.drawPoint(x,y)
-            painter.end()
-            self.window3.setPixmap(self.qpixmap_rgba.scaled(
-            self.scale_factor3 * self.qpixmap_rgba.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
-            # print("painting ended")
-            return True
-        return super().eventFilter(obj, event)
-
-    def check_pixel(self, image, x, y, color):
-
-        # print(x,y,image.width(), image.height())
-        if x < 1 or x >= image.width() -1 or y < 1 or y >= image.height() - 1:
-            # print("exiting here????")
-            return False
-        # print("pixelcolor", image.pixelColor(x,y), type(image.pixelColor(x,y)))
-        # print("color", color, type(color))
-
-
-        return image.pixelColor(x, y) == color
 
 
 if __name__ == "__main__":
