@@ -88,18 +88,18 @@ class MainWindow(QMainWindow):
 
 
         vlayout2.addWidget(scroll_area2)
-        vwidget2 = QWidget()
-        vwidget2.setLayout(vlayout2)
 
 
+
+        #
+        # vwidget2 = QWidget()
+        # vwidget2.setLayout(vlayout2)
 
         # Create the third main window
         self.window3 = QLabel()
         self.window3.setAlignment(Qt.AlignCenter)
         self.window3.setStyleSheet("border: 1px solid green;")
         self.window3.setFixedSize(800, 800)
-
-
         blank_rgba = np.zeros((4096, 4096, 4), dtype=np.uint8)
 
         # Convert the NumPy array to a QImage
@@ -107,7 +107,6 @@ class MainWindow(QMainWindow):
 
         # Convert the QImage to a QPixmap
         self.qpixmap_rgba = QPixmap.fromImage(qimage_rgba)
-
         self.scale_factor3 = 0.1953125
 
 
@@ -118,12 +117,22 @@ class MainWindow(QMainWindow):
         self.window3.setPixmap(scaled_pixmap)
         self.window3.adjustSize()  # Make sure the label is resized to fit the pixmap
 
+        hlayout_2_3 = QHBoxLayout()
+        hlayout_2_3.addLayout(vlayout2)
+        hlayout_2_3.addWidget(self.window3)
 
+        self.color_code = QLabel()
+        self.color_code.setAlignment(Qt.AlignCenter)
+        self.color_code.setStyleSheet("border: 1px solid blue;")
+        self.color_code.setFixedSize(1600, 150)
+
+        final_vlayout = QVBoxLayout()
+        final_vlayout.addLayout(hlayout_2_3)
+        final_vlayout.addWidget(self.color_code)
 
         # Add the main windows to the main widget
         hlayout.addWidget(vwidget)
-        hlayout.addWidget(vwidget2)
-        hlayout.addWidget(self.window3)
+        hlayout.addLayout(final_vlayout)
 
         main_widget.setLayout(hlayout)
 
