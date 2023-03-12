@@ -108,13 +108,14 @@ class MainWindow(QMainWindow):
         # Convert the QImage to a QPixmap
         self.qpixmap_rgba = QPixmap.fromImage(qimage_rgba)
         self.scale_factor3 = 0.1953125
+        self.tainted = False
 
 
 
-        scaled_pixmap = self.qpixmap_rgba.scaled(
+        scaled_pixmap3 = self.qpixmap_rgba.scaled(
             self.scale_factor3 * self.qpixmap_rgba.size(),
             Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.window3.setPixmap(scaled_pixmap)
+        self.window3.setPixmap(scaled_pixmap3)
         self.window3.adjustSize()  # Make sure the label is resized to fit the pixmap
 
         hlayout_2_3 = QHBoxLayout()
@@ -346,7 +347,6 @@ class MainWindow(QMainWindow):
                     print("this shouldn't happen")
                     label2.installEventFilter(self)
                     self.color_code.addLayout(colorLayout)
-
                     self.color_change_queue.append([input_color, output_color, x, y, self.currentYear])
 
 
@@ -401,6 +401,9 @@ class MainWindow(QMainWindow):
                 self.window3.setPixmap(self.qpixmap_rgba.scaled(
                 self.scale_factor3 * self.qpixmap_rgba.size(),
                 Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                self.window3.adjustSize()
+                self.tainted = True
+                # print("height of window3", self.window3.pixmap().height())
             # print("painting ended")
                 return True
         return super().eventFilter(obj, event)
@@ -446,8 +449,6 @@ class MainWindow(QMainWindow):
                     continue
                 np_array[x][y] = 1
                 if not self.check_pixel(original_image, x, y, input_color):
-                    # print("exiting here for some reason")
-                    # print("out1")
                     continue
                 max_area["%s,%s" % (x, y)] = 1
                 if np_array[x + 1, y] == 0:
@@ -484,7 +485,9 @@ class MainWindow(QMainWindow):
                             if self.check_pixel(new_year_image, x, y, input_color):
                                 to_draw.append([x,y])
                 else:
+                    stack_x, stack_y = in_x, in_y
                     for key in max_area.keys():
+                        # print(key)
                         x,y = int(key.split(",")[0]), int(key.split(",")[1])
                         # print("here safe", x,y)
                         if self.check_pixel(new_year_image, x, y, input_color):
@@ -536,8 +539,11 @@ class MainWindow(QMainWindow):
 
 
 
-        if self.window3.pixmap() !=None:
-            rgba = self.window3.pixmap().toImage()
+        if self.tainted:
+            # print(self.window3.pixmap())
+            # print(self.window3.pixmap().size())
+            # print(self.window3.pixmap().height())
+            rgba = self.qpixmap_rgba.toImage()
             save_file = os.path.join(folder_name, "custom.png")
             rgba.save(save_file, "png")
 
