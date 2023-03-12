@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
         # Create a main widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
+        self.radius = 0.3
 
 
         self.gaussian = False
@@ -226,6 +227,9 @@ class MainWindow(QMainWindow):
             os.makedirs(folder_name)
             print(f"Created directory {folder_name}")
 
+
+
+
         for input_color, output_color, in_x, in_y, year in self.color_change_queue:
             print("check this out", input_color, output_color, in_x, in_y, year)
             max_area = {}
@@ -286,7 +290,6 @@ class MainWindow(QMainWindow):
                     for y in range(4096):
                         for x in range(4096):
                             if self.check_pixel(new_year_image, x, y, input_color):
-                                # print("appended here")
                                 to_draw.append([x,y])
                 else:
                     for key in max_area.keys():
@@ -336,13 +339,24 @@ class MainWindow(QMainWindow):
                 print("points all drawn")
                 painter.end()
                 rgba.save(save_file, "png")
+
+
+
+
+
+        if self.window3.pixmap() !=None:
+            rgba = self.window3.pixmap().toImage()
+            save_file = os.path.join(folder_name, "custom.png")
+            rgba.save(save_file, "png")
+
+
         all_saved_files = os.listdir(folder_name)
         for file in all_saved_files:
             rgba_file = Image.open(os.path.join(folder_name, file))
 
 
             if self.gaussian:
-                rgba_file = rgba_file.filter(ImageFilter.GaussianBlur(radius=10))
+                rgba_file = rgba_file.filter(ImageFilter.GaussianBlur(radius=self.radius))
                 print("made into gaussian")
 
 
@@ -540,6 +554,7 @@ class MainWindow(QMainWindow):
         if obj == self.window2:
             if event.type() == QEvent.MouseButtonDblClick and event.modifiers() != Qt.AltModifier:
                 color = QColorDialog.getColor(self.color, self)
+                self.color = color
                 if color.isValid():
                     output_color = color
                     x = int(event.pos().x() / self.scale_factor)
@@ -560,6 +575,7 @@ class MainWindow(QMainWindow):
                     # colorLayout.destroyed.connect()
                     label2.installEventFilter(self)
                     self.color_code.addLayout(colorLayout)
+
 
                     # colorLayout.installEventFilter(self)
                     # print("appending: ", [input_color, output_color, x, y, self.currentYear])
